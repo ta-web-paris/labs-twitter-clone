@@ -11,6 +11,9 @@
       <p>
         Welcome, <%= user.username %>!
       </p>
+      <form action="/logout" method="POST" id="logout-form">
+        <button>Log out</button>
+      </form>
     <% } %>
 
     <%- body %>

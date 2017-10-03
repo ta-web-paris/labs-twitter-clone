@@ -563,10 +563,12 @@ We have done the whole process of authorization. There is just one step left to 
 
 ### Logout
 
-In the logout we will have to destroy the session. It's not a good practice to create a `GET` method to do that, but for this exercise will be enough. In the `authController` we have to add the following:
+In the logout we will have to destroy the session. It's not a good practice to use the `GET` method for our logout route because `GET` routes should not change the state of the application. We will therefore use the `POST` method.
 
-```javascript=80
-authController.get("/logout", (req, res, next) => {
+In the `authController` we have to add the following:
+
+```javascript
+authController.post("/logout", (req, res, next) => {
   if (!req.session.currentUser) { res.redirect("/"); return; }
 
   req.session.destroy((err) => {
@@ -579,7 +581,22 @@ authController.get("/logout", (req, res, next) => {
 });
 ```
 
-As you can see, we check out if we have started a session before destroy it. If we don't, we redirect the user to the login to let them log in.
+As you can see, we check if we have started a session before destroying it.
+
+Because we are using a `POST` method, we are not able to logout by simply typing the URL in the brower's address bar or by linking with an anchor tag; we need a form with a submit button.
+
+When a user is logged in, we want a logout button to appear on every page. To do so, we will to add it to the main layout.
+In `views/layout/main-layout.ejs`, inside the `if` block and right after the welcome message, we include the following code:
+
+```javascript
+// views/layouts/main-layout.ejs
+// In the if(user) block, after the welcome paragraph:
+<form action="/logout" method="POST" id="logout-form">
+  <button>Log out</button>
+</form>
+```
+
+You can now test if it works by logging in then logging out.
 
 **Now we are ready to start tweeting!**
 
