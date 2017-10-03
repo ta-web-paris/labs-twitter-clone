@@ -465,7 +465,7 @@ authController.post("/login", (req, res, next) => {
 
 We are ready to login! Try to fill up the form and see what happens.
 
-### TODO
+### Access user data in views
 
 We may want to access the user data in any of our pages. By setting properties to `req.locals` we can set variables for our views without having to pass the data to the render method every time we need it.
 
