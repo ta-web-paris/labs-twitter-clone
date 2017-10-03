@@ -602,11 +602,11 @@ You can now test if it works by logging in then logging out.
 
 ## Tweets
 
-Now that we have the basic authentication setup, we should start with the actual functionality of our Tweeter. The steps to add the functionality are:
+Now that we have the basic authentication setup, we should start implementing the main features of our Tweeter: adding and displaying tweets. The steps to add those are:
 
-1. Create the Schema in Mongoose so our users will have tweets
-2. We will create a `New Tweet` form and controller action
-3. We will show `My tweets`
+1. Create a Tweet model with Mongoose
+2. Create a form to add tweet and a controller action
+3. Create a view to display a user's tweets
 
 Ready?
 
