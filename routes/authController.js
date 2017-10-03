@@ -27,32 +27,33 @@ authController.post("/signup", (req, res, next) => {
     return;
   }
 
-  User.findOne({ "username": username }, "username", (err, user) => {
-    if (user !== null) {
-      res.render("auth/signup", {
-        errorMessage: "The username already exists"
-      });
-      return;
-    }
-
-    const salt = bcrypt.genSaltSync(bcryptSalt);
-    const hashPass = bcrypt.hashSync(password, salt);
-
-    const newUser = User({
-      username,
-      password: hashPass
-    });
-
-    newUser.save((err) => {
-      if (err) {
+  User.findOne({ "username": username }, "username")
+    .then(user => {
+      if (user !== null) {
         res.render("auth/signup", {
-          errorMessage: "Something went wrong when signing up"
+          errorMessage: "The username already exists"
         });
-      } else {
-        res.redirect("/login");
+        return;
       }
+
+      const salt = bcrypt.genSaltSync(bcryptSalt);
+      const hashPass = bcrypt.hashSync(password, salt);
+
+      const newUser = User({
+        username,
+        password: hashPass
+      });
+
+      newUser.save()
+        .then(() => {
+          res.redirect("/login");
+        })
+        .catch(err => {
+          res.render("auth/signup", {
+            errorMessage: "Something went wrong when signing up"
+          });
+        });
     });
-  });
 });
 
 authController.get("/login", (req, res, next) => {
@@ -70,25 +71,32 @@ authController.post("/login", (req, res, next) => {
     return;
   }
 
-  User.findOne({ "username": username },
-    "_id username password following",
-    (err, user) => {
-      if (err || !user) {
+  User
+    .findOne(
+      { "username": username },
+      "_id username password following"
+    )
+    .then(user => {
+      if (!user) {
         res.render("auth/login", {
           errorMessage: "The username doesn't exist"
         });
         return;
-      } else {
-        if (bcrypt.compareSync(password, user.password)) {
-          req.session.currentUser = user;
-          res.redirect("/tweets");
-        } else {
-          res.render("auth/login", {
-            errorMessage: "Incorrect password"
-          });
-        }
       }
-  });
+      if (bcrypt.compareSync(password, user.password)) {
+        req.session.currentUser = user;
+        // Logged in
+        // For now we redirect to the home page
+        res.redirect("/");
+      } else {
+        res.render("auth/login", {
+          errorMessage: "Incorrect password"
+        });
+      }
+    })
+    .catch(err => {
+      console.error(err)
+    });
 });
 
 authController.post("/logout", (req, res, next) => {

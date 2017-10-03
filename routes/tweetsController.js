@@ -5,8 +5,12 @@ const tweetsController = express.Router();
 const Tweet = require("../models/tweet");
 
 tweetsController.use((req, res, next) => {
-  if (req.session.currentUser) { next(); }
-  else { res.redirect("/login"); }
+  if (req.session.currentUser) {
+     next();
+  }
+  else {
+    res.redirect("/login");
+  }
 });
 
 tweetsController.get("/", (req, res, next) => {
