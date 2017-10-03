@@ -11,6 +11,7 @@ const MongoStore = require("connect-mongo")(session);
 
 const users = require('./routes/users');
 const authController = require('./routes/authController');
+const tweetsController = require("./routes/tweetsController");
 
 mongoose.connect('mongodb://localhost/twitter-lab-development');
 
@@ -54,6 +55,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use("/", authController);
+app.use("/tweets", tweetsController);
 app.use('/users', users);
 
 // catch 404 and forward to error handler

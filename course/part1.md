@@ -675,59 +675,64 @@ mytweetTweet.save()
   .catch(err => { /* .. etc .. */ });
 ```
 
-### Tweets controller
+### Controller & View
 
-Now that we have the model defined, we can start by creating a **tweet Controller** that will manage all the actions for managing the tweets. Also, we will create a `tweets` folder inside our views, so we can group all the html related to our controller:
+Now that we have the model defined, we can start by creating a **tweet controller** that will manage all the actions directly related to tweets. Also, we will create a `tweets` folder in the `views` folder so we can group the views related to this controller.
 
 ```bash
 $ touch routes/tweetsController.js
+$ mkdir views/tweets
 ```
 
-Our controller will have, for now, only an `index` method that will show our username. We will get the username from `req.session.currentUser.username`:
+The root route should display the user's tweets. However, we will only display the username for now.
 
 ```javascript
-const express          = require("express");
+// routes/tweetsController.js
+const express = require("express");
 const tweetsController = express.Router();
 
 tweetsController.get("/", (req, res, next) => {
-  res.render(
-    "tweets/index",
-    { username: req.session.currentUser.username}
-  );
+  res.render("tweets/index");
 });
 
 module.exports = tweetsController;
 ```
 
-And lastly, we will create our `views/tweets/index.ejs` view:
+We need to create the view in `views/tweets/index.ejs`:
 
 ```htmlmixed
-<div id="container">
-  <h2>Hi @<%= username %>!</h2>
+// views/tweets/index.ejs
+<div class="container">
+  <h2>Tweets of @<%= user.username %></h2>
 </div>
 ```
 
-The last step is to include our new Tweets Controller in our `app.js`. We will mount this controller in `/tweets`; this  means that all the routes defined in the controller will start from `/tweets`:
+The last step is to include our new controller in `app.js`. We will mount this controller on `/tweets`; this  means that all the routes defined in the controller will be prepended with `/tweets`:
 
 ```javascript
+// app.js
+// After the declaration of authController, add:
 const tweetsController = require("./routes/tweetsController");
 
+// After app.use("/", authController), add:
 app.use("/tweets", tweetsController);
 ```
 
 Now that we have the basic structure done, we can test that it works by going to [http://localhost:3000/tweets](http://localhost:3000/tweets)
 
 :::warning
-:exclamation: Make sure you're logged in or this will throw an error!
+:exclamation: Make sure you're logged in or it will throw an error!
 :::
 
 ### Protecting Routes
 
-If we are not authenticated and we try to access the `/tweets` route, we will get an error; We can't find *username* because there is not a session defined.
+If we are not authenticated and we try to access the `/tweets` route, we will get an error; We can't find *username* because the value of `user` is `undefined`; and the value of `user` is `undefined` because there is no session yet.
 
 We can add a basic middleware to our `tweetsController` to ensure that all actions must have an authenticated user; otherwise we will redirect to the login page:
 
 ```javascript
+// routes/tweetsController.js
+// Before the GET action on /, add:
 tweetsController.use((req, res, next) => {
   if (req.session.currentUser) { next(); }
   else { res.redirect("/login"); }
@@ -736,20 +741,20 @@ tweetsController.use((req, res, next) => {
 
 ### New tweet
 
-Adding the *New Tweet* functionality to our application has two parts:
+We will add the *New Tweet* feature to our application in two steps:
 
-1. Route/View to show the new tweet form
-1. Route to receive the form post and create a tweet 
-
+1. Implementing the route and the view to show the *New Tweet* form
+2. Implemnting the route to receive the form post and create the tweet 
 
 #### GET: New Tweet Form
 
-To create a new tweet we add a route in our controller:
+To display the *New Tweet* form we first add a route in our controller:
 
-```javascript
+```javascript 
+// routes/tweetsController.js
+// ...other code
 tweetsController.get("/new", (req, res, next) => {
-  res.render("tweets/new", 
-    { username: req.session.currentUser.username });
+  res.render("tweets/new");
 });
 ```
 
