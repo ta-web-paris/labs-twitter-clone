@@ -322,65 +322,109 @@ If we launch the website with `npm start`, we will be able to find our form at t
 
 ### Login
 
-Now we have already created our first user, we can access to the platform. We need to create the login functionality to do that. Once we have logged in, we have to implement some logic to be able to know we are already authenticated. We will use sessions and cookies to do that.
+Now that we have created our first user, we want to give access to the platform. We need to create the login functionality to do that.
+Once the user has logged in, we need to remember that he or she has. We will use sessions and cookies to do that.
 
 #### Session and Cookies
 
-We will use `express-session` to create a session and save the data of the logged user. We will also use `connect-mongo` to create a cookie and store it as a session backup in the database:
+We will use `express-session` to create a session and save the data of the logged user. We will also use `connect-mongo` to create a cookie and store it as a session backup in the database.
+
+First, we need to install those packages:
 
 ```bash
-$ npm install --save express-session
-$ npm install --save connect-mongo
+$ npm install express-session connect-mongo
 ```
 
-#### Layout
+Then, we need to setup the sessions:
 
-The first step is to create the layout that the user will use to send his credentials, username and password, to the server. We will create the following laoyut in the `/views/auth/login.ejs` file:
+```javascript
+// app.js
+const session = require("express-session");
+const MongoStore = require("connect-mongo")(session);
+
+// ...other code
+// Make sure the following goes after you connect to the database
+app.use(session({
+  secret: "Pc6COelkx0Hp", // You can put any random string here
+  cookie: {
+    maxAge: 24 * 60 * 60 // 1 day
+  },
+  store: new MongoStore({
+    mongooseConnection: mongoose.connection,
+    ttl: 24 * 60 * 60 // 1 day
+  }),
+  resave: true,
+  saveUninitialized: true
+}));;
+```
+
+#### View
+
+The first step is to create the layout that the user will use to send his or her credentials, username and password to the server. We will create the following view in the `views/auth/login.ejs` file:
 
 ```htmlmixed
+<!-- views/auth/login.ejs -->
 <h2>Login</h2>
 
-<form action="/login" method="POST" id="form-container" class="login">
-  <label for="username">Username</label>
-  <input type="text" name="username" placeholder="JonSnow">
-  <br><br>
-  <label for="password">Password</label>
-  <input type="password" name="password" placeholder="Your password">
-  <br><br>
+<form action="/login" method="POST" id="login-form">
+  <label>
+    Username: 
+    <input
+      type="text"
+      name="username" 
+      placeholder="JonSnow">
+  </label>
+  <br>
+  <label>
+    Password:
+    <input
+      type="password"
+      name="password" 
+      placeholder="Your password">
+  </label>
+  <br>
   <button>Sign in</button>
-
   <p class="account-message">
     Don't have an account? <a href="/signup">Sign up</a>
   </p>
+  <% if (typeof(errorMessage) !== "undefined") { %>
+    <div class="error-message"><%= errorMessage %></div>
+  <% } %>
 </form>
 ```
 
-As you can see, we have added a link under the signup form to let new users create an account if they don't have one. We should do the same in the sign up form. We can add the link in the `/views/auth/signup.ejs` file:
+As with the signup form, a `div` containing the error message will be included if an error is raised.
 
-```htmlmixed=15
-<p class="account-message">
-  Do you already have an account? <a href="/login">Login</a>
-</p>
+Also, we have added a link under the signup form to let new users create an account if they don't have one. We should do the same in the sign up form. We can add the link in the `views/auth/signup.ejs` file:
+
+```htmlmixed
+<!-- views/auth/signup.ejs -->
+<!-- ...form -->
+  <p class="account-message">
+    Do you already have an account? <a href="/login">Login</a>
+  </p>
+<!-- ...form -->
 ```
 
-#### Routes
+#### Controller
 
-Now we can create the routes to allow the users to log in the app. Again, we need to create a `GET` and a `POST` over the route `/login`. 
+Now we can create the routes to allow the users to log in the app. Again, we need to create a `GET` and a `POST` over the endpoint `/login`. 
 
-In the first one, we will show the layout we created in the previous step.
+For `GET` we will show the view we created in the previous step.
 
-In the second one we will check out if the user has inserted his data correctly, and we will save his data in the session if he logs in successfully.
+For `POST` we will first check if the user has inserted his or her data correctly. We will then need to check that the user exists and that the hash of the provided password matches the stored one. If the checks pass we store the user data in the session. 
 
-As the login functionality is also related with authorization, as signup, we will add the following code in the `/routes/authController.js` file:
+As with signup, the login functionality is related to authorization. As such we will add the following code in the `routes/authController.js` file:
 
-```javascript=48
+```javascript
+// routes/authController.js
 authController.get("/login", (req, res, next) => {
   res.render("auth/login");
 });
 
 authController.post("/login", (req, res, next) => {
-  var username = req.body.username;
-  var password = req.body.password;
+  const username = req.body.username;
+  const password = req.body.password;
 
   if (username === "" || password === "") {
     res.render("auth/login", {
@@ -400,7 +444,9 @@ authController.post("/login", (req, res, next) => {
       } else {
         if (bcrypt.compareSync(password, user.password)) {
           req.session.currentUser = user;
-          // logged in
+          // Logged in
+          // For now we redirect to the home page
+          res.redirect("/");
         } else {
           res.render("auth/login", {
             errorMessage: "Incorrect password"
@@ -411,28 +457,55 @@ authController.post("/login", (req, res, next) => {
 });
 ```
 
-To show the error messages if it's necessary, we have to add the corresponding tags in the HTML:
+We are ready to login! Try to fill up the form and see what happens.
 
-```htmlmixed=8
-<% if (typeof(errorMessage) !== "undefined") { %>
-  <div class="error-message"><%= errorMessage %></div>
+### TODO
+
+We may want to access the user data in any of our pages. By setting properties to `req.locals` we can set variables for our views without having to pass the data to the render method every time we need it.
+
+In our case we will create a middleware that will save the user data stored in the session in `req.local.user`, if there is any. In `app.js`, before using the routers, we need to add:
+
+```javascript
+// app.js
+// ...other code
+app.use((req, res, next) {
+  if (res.session) {
+    res.locals.user = res.session.currentUser
+  } else {
+    res.locals.user = undefined
+  }
+  next()
+})
+```
+
+Now that we have access to the `user` variable in our views, let's make use of it. If a user is logged, we will display a welcome message with his or her username on every page.
+
+In `views/layouts/main-layout.ejs`, we add the following code right after the image:
+
+```htmlmixed
+<!-- views/layouts/main-layout.ejs -->
+<!-- ...other code -->
+<% if(user) { %>
+<p>
+  Welcome, <%= user.username %>!
+</p>
 <% } %>
 ```
 
-We are ready to login! Try to fill up the form and see what happens.
+We are now able to know at any time whether the right user is logged in or not.
 
 ### Auth redirections
 
-As you can see, when a new user signs up or an existent user logs in, nothing happens. We need to add two different redirections to create a flow in our application that allow the users to:
+As you can see, when a new user signs up or an existing user logs in, we just redirect to the home page. We can do better. The flow we want is:
 
-- First: sign up
-- Second: log in
+- After the users create an account, they need to log in
+- After the users log in, they will be able to see their tweets
 
-First of all, let's add the redirection from the sign up to the log in. Once we have created the account, the next step for the user is to log in. We will redirect them from sign up to log in. In the `POST` of the sign up, we will add a redirection to the log in.
+First of all, let's add the redirection from the sign-up page to the login page. In the `POST` of `/signup` we will add a redirection to the login page.
 
-**Note that we put a comment in the code to indicate that the user was already created. Here is where we have to put the redirection.**
-
-```javascript=51
+```javascript
+// routes/authController.js
+// In the handler of authController.post("/signup"):
 newUser.save((err) => {
   if (err) {
     res.render("auth/signup", {
@@ -444,12 +517,14 @@ newUser.save((err) => {
 });
 ```
 
-Following the same logic, once the users log in, they should be redirected to their own page, where they can find their tweets. We will create this page later in this learning unit, so we can add the redirection and comment it until we need it.
+Following the same logic, once the users log in, they should be redirected to their own page, where they can find their tweets. We will create this page later; for now, the `/tweets` route raise an error 404.
 
-```javascript=72
+```javascript
+// routes/authController.js
+// In the handler of authController.post("/login"):
 if (bcrypt.compareSync(password, user.password)) {
   req.session.currentUser = user;
-  // res.redirect("/tweets");
+  res.redirect("/tweets");
 } else {
   res.render("auth/login", {
     errorMessage: "Incorrect password"
@@ -457,15 +532,34 @@ if (bcrypt.compareSync(password, user.password)) {
 }
 ```
 
-We should add one more redirection. What happens when we visit the root of the website? Nothing! We should redirect the users to the login page, so they can log in with their credentials. We will add the following code into the `authController` file:
+We should add one more redirection. What happens when we visit the root of the website? Nothing very interesting... We should redirect the users to the login page, so they can log in with their credentials.
 
-```javascript=11
+```javascript
+// routes/authController.js
 authController.get("/", (req, res) => {
   res.redirect("/login");
 });
 ```
 
-We have covered the whole process of authorization. There is just one step pending to cover: the logout.
+Because we don't need it anymore, we can remove the router that has been generated by default by `express-generator` as well as the homepage view.
+
+```bash
+$ rm routes/index.js
+$ rm views/index.ejs
+```
+
+We also need to remove the reference to the router in `app.js`.
+In `app.js`, please **REMOVE** the following lines:
+
+```javascript
+// app.js
+// Somewhere at towards the top of the file, remove:
+const index = require('./routes/index');
+// Somewhere in the middle of file, remove:
+app.use('/', index);
+```
+
+We have done the whole process of authorization. There is just one step left to cover: the logout.
 
 ### Logout
 
