@@ -834,60 +834,67 @@ Now that wew have tweets, we should show them in our `tweets` page!
 All we need to do is modify our controller to:
 
 1. Find the current user
-2. Find all her tweets, sort them by descending creation date
+2. Find all her tweets and sort them by descending creation date
 3. Pass them to our `index` view
 
-```javascript
-const moment = require("moment");
-// other code
-tweetsController.get("/", (req, res, next) => {
-  User
-    .findOne({ username: req.session.currentUser.username }, "_id username")
-    .exec((err, user) => {
-      if (!user) { return; }
+We will use [MomentJS](https://momentjs.com/) to format our dates. You can install it as usual:
 
-      Tweet.find({ "user_name": user.username }, "tweet created_at")
-        .sort({ created_at: -1 })
-        .exec((err, tweets) => {
-          console.log("tweets");
-          res.render("tweets/index", 
-            {
-              username: user.username, 
-              tweets,
-              moment });
-        });
-  });
+```bash
+$ npm install moment
+```
+
+:::info
+:bulb: Notice that in order to use `moment` in the views we need to require it from the controller and then pass it to the views as a parameter
+:::
+
+```javascript
+// routes/tweetsController.js
+// Towards the top, add:
+const moment = require("moment");
+// Instead of the original GET action on /, put:
+tweetsController.get("/", (req, res, next) => {
+  const user = req.session.currentUser
+
+  Tweet
+    .find(
+      { "user_name": user.username },
+      "tweet user_name user_id created_at"
+    )
+    .sort({ created_at: -1 })
+    .then((tweets) => {
+      res.render("tweets/index", {
+        tweets,
+        moment
+      });
+    });
 });
 ```
 
-And our `index` view will just iterate over all the tweets.
+Our `index` view will just iterate over all the tweets.
+It will also include a link to the *New Tweet* form.
 
 ```htmlmixed
-<div id="container">
+// views/tweets/index.ejs
+<div class="container">
   <a href="/tweets/new">New tweet</a>
-  <a href="/logout">Logout</a>
 
-  <h2>@<%= username %> tweets</h2>
+  <h2>Tweets of @<%= user.username %></h2>
 
-  <% tweets.forEach(function(tweet) { %>
+  <% tweets.forEach((tweet) => { %>
     <div class="tweet-container">
-      <p><%= tweet.tweet %></p>
-      <p class="date"><%= moment(tweet.created_at).format("LL, LTS") %></p>
+      <p class="author">
+        @<%= tweet.user_name %>
+      </p>
+      <p class="tweet">
+        <%= tweet.tweet %>
+      </p>
+      <p class="date">
+        <%= moment(tweet.created_at).format("LL, LTS") %>
+      </p>
     </div>
   <% }) %>
 </div>
 ```
-
-We use [MomentJS](https://momentjs.com/) to format our dates. To install it simply install the npm package and require it:
-
-```bash
-$ npm install --save moment
-```
-
-:::info
-:bulb: Notice that in order to use `moment` in your views, you need to require them from your controller and then pass it to the views as a parameter
-:::
-
 ## Summary
 
 In this learning unit we have seen how to create mongoose models based on what we want to build in our website. We have seen how to structure a project to separate the functionalities in different files. We have also created sessions and saved them in the database as a backup, and we created the necessary code to publish tweets from our profile.

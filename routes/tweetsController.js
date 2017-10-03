@@ -1,4 +1,5 @@
 const express = require("express");
+const moment = require("moment");
 const tweetsController = express.Router();
 
 const Tweet = require("../models/tweet");
@@ -9,7 +10,21 @@ tweetsController.use((req, res, next) => {
 });
 
 tweetsController.get("/", (req, res, next) => {
-  res.render("tweets/index");
+  const user = req.session.currentUser
+
+  Tweet
+    .find(
+      { "user_name": user.username },
+      "tweet user_name user_id created_at"
+    )
+    .sort({ created_at: -1 })
+    .then((tweets) => {
+      console.log(tweets);
+      res.render("tweets/index", {
+        tweets,
+        moment
+      });
+    });
 });
 
 tweetsController.get("/new", (req, res, next) => {
@@ -18,6 +33,7 @@ tweetsController.get("/new", (req, res, next) => {
 
 tweetsController.post("/", (req, res, next) => {
   const user = req.session.currentUser;
+  console.log("user", user)
 
   const newTweet = new Tweet({
     user_id: user._id,
