@@ -1,0 +1,17 @@
+<div class="container">
+  <h2>Adding a new tweet</h2>
+
+  <form action="/tweets" method="POST" id="new-tweet-form">
+    <label>Tweet
+      <input
+        type="text"
+        name="tweetText"
+        maxlength="140"
+        placeholder="What's going on?">
+    </label>
+    <button>Tweet!</button>
+    <% if (typeof(errorMessage) !== "undefined") { %>
+      <div class="error-message"><%= errorMessage %></div>
+    <% } %>
+  </form>
+</div>

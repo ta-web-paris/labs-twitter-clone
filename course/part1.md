@@ -744,7 +744,7 @@ tweetsController.use((req, res, next) => {
 We will add the *New Tweet* feature to our application in two steps:
 
 1. Implementing the route and the view to show the *New Tweet* form
-2. Implemnting the route to receive the form post and create the tweet 
+2. Implementing the route to receive the form post and create the tweet 
 
 #### GET: New Tweet Form
 
@@ -758,75 +758,74 @@ tweetsController.get("/new", (req, res, next) => {
 });
 ```
 
-We should add a `views/tweets/new.ejs` view with a form that contains the tweet input 
+We should add a `views/tweets/new.ejs` view with a form that contains the tweet input:
 
 ```htmlmixed
-<div id="container">
-  <h2>Hi @<%= username %>!</h2>
+<!-- views/tweets/new.ejs -->
+<div class="container">
+  <h2>Adding a new tweet</h2>
 
-  <form action="/tweets" method="POST" id="new-tweet">
-    <label for="tweetText">Tweet</label>
-    <input type="text" name="tweetText" maxlength="140"
-      placeholder="What's going on?" >
-    <button class="button blue fright">Tweet!</button>
+  <form action="/tweets" method="POST" id="new-tweet-form">
+    <label>Tweet
+      <input
+        type="text"
+        name="tweetText"
+        maxlength="140"
+        placeholder="What's going on?">
+    </label>
+    <button>Tweet!</button>
+    <% if (typeof(errorMessage) !== "undefined") { %>
+      <div class="error-message"><%= errorMessage %></div>
+    <% } %>
   </form>
-
-  <% if (typeof(errorMessage) != "undefined") { %>
-    <div class="error-message"><%= errorMessage %></div>
-  <% } %>
 </div>
 ```
 
-This view will POST the `tweetText` to a new action (`/tweets`) that will receive the tweet and add it to the database.
+The form will POST the `tweetText` to a new action (`/tweets`) that will receive the tweet and add it to the database.
 
 #### POST: Create New Tweet
 
-We need to create the action that will receive the new tweet form post. We only allow authenticated users to create posts in their own account. 
-
-This means we need to find the authenticated user, so we will add the `User` and `Tweet` models to our controller:
+Because we will need to use the `Tweet` model, we first need to import it:
 
 ```javascript
-// tweetsController.js
-// Models
-const User  = require("../models/user");
+// routes/tweetsController.js
+// At the top, add:
 const Tweet = require("../models/tweet");
 ```
 
-And now we will add the logic to save the tweet:
+Now we will add the logic to save the tweet:
 
-1. Find the `currentUser` object
-1. Creates a `newTweet` tweet instance and fills the information
-1. Saves ito to the database
-1. If OK: Redirects to `/tweets` 
-1. If Not OK: adds an `errorMessage` and render `tweets/new`
+1. Get the authenticated user
+1. Create a new tweet instance and fill it with the provided information
+1. Save it to the database
+1. If OK: Redirect to `/tweets` 
+1. If not OK: Add an `errorMessage` and render `tweets/new`
 
 ```javascript
+// routes/tweetsController.js
+// ...other code
 tweetsController.post("/", (req, res, next) => {
-  const user  = req.session.currentUser;
+  const user = req.session.currentUser;
 
-  User.findOne({ username: user.username }).exec((err, user) => {
-    if (err) { return; }
-
-    const newTweet = new Tweet({
-      user_id:   user._id,
-      user_name: user.username,
-      tweet:     req.body.tweetText
-    });
-
-    newTweet.save((err) => {
-      if (err) {
-        res.render("tweets/new", 
-          {
-            username: user.username, 
-            errorMessage: err.errors.tweet.message
-          });
-      } else {
-        res.redirect("/tweets");
-      }
-    });
+  const newTweet = new Tweet({
+    user_id: user._id,
+    user_name: user.username,
+    tweet: req.body.tweetText
   });
+
+  newTweet.save()
+    .then(() => {
+      res.redirect("/tweets");
+    })
+    .catch(err => {
+      res.render("tweets/new", {
+        errorMessage: err.errors.tweet.message
+      });
+    });
 });
 ```
+
+You can test that creating a new tweet works by opening a mongo shell and querying for the `tweets` collection.
 
 ### My tweets
 
