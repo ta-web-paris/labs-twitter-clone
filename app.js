@@ -5,9 +5,13 @@ const logger = require('morgan');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const expressLayouts = require('express-ejs-layouts');
+const mongoose = require('mongoose');
 
 const index = require('./routes/index');
 const users = require('./routes/users');
+const authController = require('./routes/authController');
+
+mongoose.connect('mongodb://localhost/twitter-lab-development');
 
 const app = express();
 
@@ -25,7 +29,9 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Routes
 app.use('/', index);
+app.use("/", authController);
 app.use('/users', users);
 
 // catch 404 and forward to error handler

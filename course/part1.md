@@ -61,10 +61,9 @@ Let's connect to mongoose by adding the following code in `app.js`:
 const mongoose = require('mongoose');
 // ...other code
 mongoose.connect('mongodb://localhost/twitter-lab-development');
-
 ```
 
-As you should know, Express has to be restarted every time we change some code. To avoid doing this manually, we will use [nodemon](https://www.npmjs.com/package/nodemon) 
+As you should know, the express server has to be restarted every time we change some code. To avoid doing this manually, we will use [nodemon](https://www.npmjs.com/package/nodemon)
 
 :::warning
 :bulb: Again, remember you have to install the package `nodemon` globally before using it in the console:
@@ -112,6 +111,9 @@ Before we start coding, we should configure our main layout to display all the v
 As you can see, we have also added an image with the twitter logo in the `public/images` folder. To make it smaller we need to add a rule in our stylesheet which located at `public/stylesheets/style.css`.
 
 ```css
+/* public/stylesheets/style.css */
+
+/* ...other rules */
 .header-logo {
   height: 1.4rem;
 }
@@ -132,109 +134,127 @@ We are ready to start with our own twitter version! Now is a good idea to make y
 
 ## Authentication
 
-If we visit [twitter](https://twitter.com/), the first we may notice is that there is a login form to access to our profile. This is why authentication is one of the most important features we will implement in the project.
+If we visit [twitter](https://twitter.com/), the first thing we notice is the login form to access our profile. This is why authentication is one of the most important features in this project.
 
-The main goal of the authentication is to discern between different users. It will allow us to access the platform, be able to know who has published each tweet, and who is following us (or who are we following).
+The main goal of the authentication is to securly identify users. It will allow them to access the platform, know who has published each tweet, and who is following them (or who they are following).
 
-The authentication process requires an account creation before doing anything else, so this is the first thing we will do: we will allow users to authenticate themselves with username and password.
+The authentication process requires an account creation before doing anything else, so this is the first thing we will do. A user will create an account by providing a username and a password.
 
 ### Sign-Up
 
 #### Model
 
-If we want to store our users data in the database, we have to create a database model with Mongoose. As we said before, each user will have a username and a password, so let's create the model in the `/models/user.js` file, with the following Schema:
+If we want to store our users data in the database, we have to create a model with Mongoose. As we said before, each user will have a username and a password, so let's create the model in the `models/user.js` file, with the following Schema:
 
 ```javascript
+// models/user.js
 const mongoose = require("mongoose");
-const Schema   = mongoose.Schema;
+const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
   username: String,
   password: String
 }, {
-  timestamps: { createdAt: "created_at", updatedAt: "updated_at" }
+  timestamps: {
+    createdAt: "created_at",
+    updatedAt: "updated_at"
+  }
 });
 
 const User = mongoose.model("User", userSchema);
+
 module.exports = User;
 ```
 
-Remember that an `_id` attribute will be added by default to all documents in the collection. Also [timestamps](http://mongoosejs.com/docs/guide.html#timestamps) is a mongoose Schema option to save the time we created/updated a document automatically.
+Remember that an `_id` attribute will be added by default to all documents in the collection. Also, [timestamps](http://mongoosejs.com/docs/guide.html#timestamps) is a mongoose Schema option to save the time we created/updated a document automatically.
 
-#### Layout
+#### View
 
-Now we have to create the layout to sign up. We need to have a form with the different fields we will save in the database collection. 
+Now we have to create the view to sign up. We need to have a form with the different fields we will save in the database collection. 
 
-This sign up will be in the `/signup` route, so the users will have to go there to create an account into the platform.
+This sign up form will be in the `/signup` route, so the users will have to go there to create an account for the platform.
 
-We are going to add the following code in the `/views/auth/signup.ejs` file:
+We are going to add the following code in the `views/auth/signup.ejs` file:
 
 ```htmlmixed
+<!-- views/auth/signup.ejs -->
 <h2>Signup</h2>
 
-<form action="/signup" method="POST" id="form-container">
-  <label for="username">Username</label>
-  <input type="text" name="username" 
-    placeholder="JonSnow">
-  <br><br>
-  <label for="password">Password</label>
-  <input type="password" name="password" 
-    placeholder="Your password">
-  <br><br>
+<form action="/signup" method="POST" id="signup-form">
+  <label>
+    Username: 
+    <input
+      type="text"
+      name="username" 
+      placeholder="JonSnow">
+  </label>
+  <br>
+  <label>
+    Password:
+    <input
+      type="password"
+      name="password" 
+      placeholder="Your password">
+  </label>
+  <br>
   <button>Create account</button>
 </form>
 ```
 
 Now we have to create the corresponding routes and the code that will allow us create and save new user accounts.
 
-#### Routes
+#### Controller
 
 We need two different routes to create a new user:
 
 * The `GET` route to show the form, and 
 * The `POST` route to receive the parameters and save the data in the database.
  
-We will create all this functionality inside the `/routes/authController.js` file. In this file, we will have to require the packages and modules we need:
+We will create those in the `routes/authController.js` file. There, we need to require some modules.
 
-```javascript=
-const express        = require("express");
+```javascript
+// routes/authController.js
+const express = require("express");
 const authController = express.Router();
 
 // User model
-const User           = require("../models/user");
+const User = require("../models/user");
 
 // Bcrypt to encrypt passwords
-const bcrypt         = require("bcrypt");
-const bcryptSalt     = 10;
+const bcrypt = require("bcrypt");
+const bcryptSalt = 10;
 ```
 
 :::info
-We are requiring `bcrypt` to be able to encrypt the user's password before save it in the database. We have to install the package and save it in the package.json through the following command:
-
-```bash
-$ npm install bcrypt --save
-```
+We are requiring `bcrypt` to be able to encrypt the user's password before saving it in the database.
+Make sure that it has been added to the `package.json` file.
 :::
 
 We define the first route as follows:
 
-```javascript=11
+```javascript
+// routes/authController.js
+
+// ...other code
 authController.get("/signup", (req, res, next) => {
   res.render("auth/signup");
 });
 ```
 
-It only renders the view we created in the `/views/auth` folder. The `POST` route is more complicated. We have to do a few things:
+It only renders the view we created in the `views/auth` folder. The `POST` route is more complicated. We have to do a few things:
 
 - Get the data that the user has inserted in the form
-- Check out that he has correctly filled up both fields
-- Check out if the username already exists in the database
-- If none of the conditions above happen, we can save the user
+- Check that he or she has correctly filled up both fields
+- Check if the username already exists in the database
+- If none of those conditions are met, we can save the user
 
-```javascript=24
+```javascript
+// routes/authController.js
+
+// ...other code
 authController.post("/signup", (req, res, next) => {
-  var username = req.body.username;
-  var password = req.body.password;
+  const username = req.body.username;
+  const password = req.body.password;
 
   if (username === "" || password === "") {
     res.render("auth/signup", {
@@ -251,10 +271,10 @@ authController.post("/signup", (req, res, next) => {
       return;
     }
 
-    var salt     = bcrypt.genSaltSync(bcryptSalt);
-    var hashPass = bcrypt.hashSync(password, salt);
+    const salt = bcrypt.genSaltSync(bcryptSalt);
+    const hashPass = bcrypt.hashSync(password, salt);
 
-    var newUser = User({
+    const newUser = User({
       username,
       password: hashPass
     });
@@ -265,7 +285,9 @@ authController.post("/signup", (req, res, next) => {
           errorMessage: "Something went wrong when signing up"
         });
       } else {
-        // User has been created...now what?
+        // User has been created
+        // For now we will redirect to the home page
+        res.redirect('/');
       }
     });
   });
@@ -274,24 +296,29 @@ authController.post("/signup", (req, res, next) => {
 module.exports = authController;
 ```
 
-You can see how we send an `errorMessage` inside the second parameter of the `render` method to indicate why the sign up failed. We have to show this message in the layout:
+You can see how we send an `errorMessage` inside the second parameter of the `render` method to indicate why the sign up failed. We have to show this message in the view so you should add the following at the end of the form:
 
-```htmlmixed=9
-<% if (typeof(errorMessage) !== "undefined") { %>
-  <div class="error-message"><%= errorMessage %></div>
-<% } %>
+```htmlmixed
+<!-- views/auth/signup.ejs -->
+<!-- ...rest of the form -->
+  <br>
+  <% if (errorMessage !== undefined) { %>
+    <div class="error-message"><%= errorMessage %></div>
+  <% } %>
+</form>
 ```
 
 To finish up this section, we have to add the controller into the `app.js` file, as follows:
 
 ```javascript
+// app.js
 const authController = require('./routes/authController');
-// ..other code
+// ...other code
 // Routes
 app.use("/", authController);
 ```
 
-If we launch the website with `npm start`, we will be able to find our form in the [`http://localhost:3000/signup`](http://localhost:3000/signup) URL. We should be able to create our first users :)
+If we launch the website with `npm start`, we will be able to find our form at the [`http://localhost:3000/signup`](http://localhost:3000/signup) URL. We should be able to create our first users :)
 
 ### Login
 
