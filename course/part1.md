@@ -616,11 +616,11 @@ In order to add Tweets to our users, we will need to store them inside a new col
 
 Each tweet will contain a few attributes:
 
-* `tweet`: *String* containing the user's tweet (140 characters)
+* `tweet`: *String* containing the user's tweet (140 characters maximum)
 * `user_id`: *ObjectId* that relates a tweet to a user
-* `user_name`: *String* with the user-name (so we don't have to query it each time)
-* `created_at`: The time of creation of the tweet
-* `updated_at`: The time the tweet was last updated
+* `user_name`: *String* with the username (so we don't have to query it each time)
+* `created_at`: The time at which the tweet was created
+* `updated_at`: The time at which the tweet was last updated
 
 Let's create a `tweet.js` model:
 
@@ -628,11 +628,11 @@ Let's create a `tweet.js` model:
 $ touch models/tweet.js
 ```
 
-The `tweet model` will first define a Mongoose schema (`tweetSchema`), then create a `Tweet` model and finally export it so we can use it in our application:
+We will first define a Mongoose schema (`tweetSchema`), then create a `Tweet` model and finally export it so we can use it in our application:
 
-```javascript=
+```javascript
 const mongoose = require("mongoose");
-const Schema   = mongoose.Schema;
+const Schema = mongoose.Schema;
 
 const tweetSchema = new Schema({
   tweet: { 
@@ -645,18 +645,23 @@ const tweetSchema = new Schema({
   },
   user_name: String,
 }, {
-  timestamps: { createdAt: "created_at", updatedAt: "updated_at" }
+  timestamps: {
+    createdAt: "created_at",
+    updatedAt: "updated_at"
+  }
 });
 
-var Tweet = mongoose.model("Tweet", tweetSchema);
+const Tweet = mongoose.model("Tweet", tweetSchema);
+
 module.exports = Tweet;
 ```
 
-After creating the `Tweet` model, we can use it by simply requiring the module and assigning it to a *const*. For example, we could use the model to access our mongo database:
+After creating the `Tweet` model, we can use it by simply requiring the module and assigning it to a variable. For example, we could use the model to access our mongo database:
 
-:::info
-:exclamation: You don't need to add the following code your project
+:::warning
+:exclamation: Don't add the following code to your project.
 :::
+
 ```javascript
 const Tweet = require("./models/tweet");
 
@@ -666,7 +671,8 @@ mytweetTweet = new Tweet({
   user_name: "Ironhacker"
 });
 
-mytweetTweet.save(function(err) { /* .. etc .. */ });
+mytweetTweet.save()
+  .catch(err => { /* .. etc .. */ });
 ```
 
 ### Tweets controller
